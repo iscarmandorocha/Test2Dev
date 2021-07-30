@@ -1,0 +1,348 @@
+﻿@model IEnumerable<Test2Dev.Models.Employee>
+
+@{
+    ViewBag.Title = "Index";
+}
+<script type="text/javascript">
+        _appBaseUrl = @Html.Raw(HttpUtility.JavaScriptStringEncode(Url.Content("~/"), true));
+</script>
+
+<h2>Dev Candidate Test 2</h2>
+
+<div class="row">
+    <div class="col-md-2 col-md-offset-10">
+        <button type="button" class="btn btn-primary" id="add">Add Employee</button>
+    </div>
+</div>
+<br />
+<hr />
+<table class="table dataTable stripe" id="tableEmployee" style="width:100%">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>LastName</th>
+            <th>RFC</th>
+            <th>BornDate</th>
+            <th>Status</th>
+            <th>-</th>
+        </tr>
+    </thead>
+</table>
+
+<div class="modal" id="modal-AddEddit">
+    <div class="modal-dialog modal-md">
+        <form action="#" method="post" id="formEmployee">
+            <div class="modal-content">
+                <div class="modal-header bg-gradient-primary">
+                    <h4 class="modal-title">Data of Employee</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Closed">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="modelName">Name</label>
+                                <input type="text" class="form-control" id="modelName" name="Name">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="modelLastName">LastName</label>
+                                <input type="text" class="form-control" id="modelLastName" name="LastName">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="modelRFC">RFC</label>
+                                <input type="text" class="form-control" id="modelRFC" name="RFC">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="modelBorn">date of birth</label>
+                                <input type="date" class="form-control" id="modelBorn" name="BornDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="modelName">Status</label>
+                                <select class="form-control" id="modelStatus" name="Status">
+                                    <option value="NoSet">NoSet</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-default" data-dismiss="modal" id="modal-btn-no">Close</button>
+                    <button type="submit" class="btn btn-outline-primary" id="apply">Save</button>
+                </div>
+            </div>
+        </form>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+
+@section Scripts{
+    <script>
+        const LengthMenu = [[20, 30, 50], [20, 30, 50]];
+        var table = "";
+        var flag = false;
+        var idEmployee = 0;
+        $(document).ready(function () {
+            table_load();
+        })
+
+        function table_load() {
+            table = $("#tableEmployee").DataTable({
+                "lengthMenu": LengthMenu,
+                /*"language": Lenguaje,*/
+                "processing": true, // para mostrar la barra de progreso
+                "serverSide": true, // Para procesar del lado del servidor
+                "filter": false, // desactiva el cuadro de busqueda
+                "orderMulti": false, // para deshabilitar varias columnas a la vez
+                "ajax": {
+                    "url": _appBaseUrl + "Employee/Employees_Load",
+                    "type": "POST",
+                    "datatype": "json",
+                    "data": {}
+                },
+                "columns": [
+                    { "data": "ID", "name": "ID" },
+                    { "data": "Name", "name": "Name" },
+                    { "data": "LastName", "name": "LastName" },
+                    { "data": "RFC", "name": "RFC" },
+                    {
+                        "data": "BornDate", "name": "BornDate",
+                        render: function (data, type, row) {
+                            return moment(String(data)).format("DD/MM/YYYY")
+                        }
+                    },
+                    {
+                        "data": "Status", "name": "Status",
+                        render: function (data, type, row) {
+                            switch (data) {
+                                case 0:
+                                    return "NotSet";
+                                    break;
+                                case 1:
+                                    return "Active";
+                                    break;
+                                case 2:
+                                    return "InActive";
+                                    break;
+                            }
+                        }
+                    },
+                    {
+                        "data": null,
+                        render: function (data, type, row) {
+                            return "<div class='btn-group align-content-center'>" +
+                                "<button type=\"button\" class=\"btn btn-warning btn-xs\" onclick='editEmployee(" + data.ID + ")' data-toggle='tooltip' data-placement='top' data-original-title='Editar'>Edit</button>" +
+                                "<button type=\"button\" class=\"btn btn-xs btn-danger\"  onclick=\"deleteEmployee(" + data.ID + ")\" data-toggle='tooltip' data-placement='top' data-original-titlee='Delete'>Delete</button>" +
+                                "</div>";;
+                        }
+                    }
+                ],
+                scrollX: "auto",
+                "destroy": true,
+            });
+        }
+
+        $.validator.addMethod("rfc",
+            function (value, element) {
+                var retorno = true;
+                if (value != "") {
+                    return /^([A-Z|a-z|&amp;]{3}\d{2}((0[1-9]|1[012])(0[1-9]|1\d|2[0-8])|(0[13456789]|1[012])(29|30)|(0[13578]|1[02])31)|([02468][048]|[13579][26])0229)(\w{2})([A|a|0-9]{1})$|^([A-Z|a-z]{4}\d{2}((0[1-9]|1[012])(0[1-9]|1\d|2[0-8])|(0[13456789]|1[012])(29|30)|(0[13578]|1[02])31)|([02468][048]|[13579][26])0229)((\w{2})([A|a|0-9]{1})){0,3}$/.test(value);
+                }
+                return retorno;
+            },
+            "Wrong RFC format. Please try again, for example: ROQA951221"
+        );
+
+        $("#formEmployee").validate({
+            onclick: false,
+            onkeypress: false,
+            onkeyup: flag,
+            onfocusout: false,
+            rules: {
+                "Name": {
+                    required: true,
+                    //max: 50
+                },
+                "LastName": {
+                    required: true,
+                    //max: 50
+                },
+                "RFC": {
+                    required: true,
+                    rfc: true
+                },
+                "BornDate": {
+                },
+                "Status": {
+                    required: true,
+                },
+            },
+            messages: {
+                "Name": {
+                    required: "It is required please",
+                    max: "Max length is of 50 characters"
+                },
+                "LastName": {
+                    required: "It is required please",
+                    max: "Max length is of 50 characters"
+                },
+                "RFC": {
+                    required: "It is required please",
+                },
+                "BornDate": {
+                },
+                "Status": {
+                    required: "It is required please",
+                },
+            },
+            submitHandler: function (form) {
+                //e.preventDefault();
+                var paramet = $("#formEmployee").serialize();
+
+                if ($("#apply").attr("data-tip") == "add") {
+                    $.ajax({
+                        type: "POST",
+                        url: _appBaseUrl + "Employee/Add_Employee",
+                        data: paramet,
+                        beforeSend: function (objeto) {
+                            /**Loader**/
+                        },
+                        success: function (data) {
+                            if (!data.error) {
+                                alert('success');
+                                table_load();
+                                $("#modal-AddEddit").modal("hide");
+                            }
+                            else {
+                                if (data.msg != "" && data.msg != null && data.msg != undefined)
+                                    alert("Unfortunately we were unable to make the changes");
+                                else
+                                    alert(data.msg)
+                            }
+                        }
+                    });
+                }
+                else if ($("#apply").attr("data-tip") == "edit") {
+                    paramet = paramet + "&ID=" + idEmployee;
+                    $.ajax({
+                        type: "POST",
+                        url: _appBaseUrl + "Employee/Eddit_Employee",
+                        data: paramet,
+                        beforeSend: function (objeto) {
+                            /**Loader**/
+                        },
+                        success: function (data) {
+                            if (!data.error) {
+                                table_load();
+                                alert('success');
+                                $("#modal-AddEddit").modal("hide");
+                            }
+                            else {
+                                if (data.msg != "" && data.msg != null && data.msg != undefined) 
+                                    alert("Unfortunately we were unable to make the changes");
+                                else
+                                    alert(data.msg)
+                            }
+                        }
+                    });
+                }
+            },
+            invalidHandler: function (event, validator) {
+                var message = errors == 1 ? ' Error: Te perdiste 1 campo. Ha sido destacado' : ' Error: Te perdiste ' + errors + ' campos. Se han destacado';
+                console.log("Mensaje Final : " + message);
+                console.log(validator);
+                event.stopImmediatePropagation();
+                event.preventDefault();
+                flag = true;
+                var errors = validator.numberOfInvalids();
+                if (errors) {
+                    $("div#formError").addClass("alert-danger");
+                    $("div#formError span#Mensaje").html(message);
+                    $("div#formError").removeClass("hidden");
+                }
+            },
+            highlight: function (element, errorClass) {
+                $(element).fadeOut(function () {
+                    $(element).fadeIn();
+                });
+            },
+            errorElement: "span",
+            errorClass: "badge badge-secondary",
+        });
+
+        $("#add").on("click", function (e) {
+            $("#apply").attr("data-tip", "add")
+            $("#modal-AddEddit").modal("show");
+        })
+        function deleteEmployee(id) {
+            $.ajax({
+                type: "POST",
+                url: _appBaseUrl + "Employee/Delete_Employee",
+                data: {"ID": id},
+                beforeSend: function (objeto) {
+                    /**Loader**/
+                },
+                success: function (data) {
+                    if (data) {
+                        alert('success');
+                        table_load();
+                    }
+                    else {
+                        alert("Unfortunately we were unable to make the changes");
+                    }
+                }
+            })
+        }
+        function editEmployee(id) {
+            $.ajax({
+                type: "POST",
+                url: _appBaseUrl + "Employee/Details_Employee",
+                data: { "ID": id },
+                beforeSend: function (objeto) {
+                    /**Loader**/
+                },
+                success: function (data) {
+                    idEmployee = id
+                    $("#modelName").val(data.Name);
+                    $("#modelLastName").val(data.LastName);
+                    $("#modelRFC").val(data.RFC);
+                    $("#modelBorn").val(moment(String(data.BornDate)).format("YYYY-MM-DD"));
+                    switch (data) {
+                        case 0:
+                            $("#modelStatus").val("NotSet").change();
+                            break;
+                        case 1:
+                            $("#modelStatus").val("Active").change();
+                            break;
+                        case 2:
+                            $("#modelStatus").val("InActive").change();
+                            break;
+                    }
+                    $("#apply").attr("data-tip", "edit")
+                    $("#modal-AddEddit").modal("show");
+                }
+            })
+        }
+    </script>
+}
